@@ -302,9 +302,8 @@ public class Piece3x3
 			while (elapsed + Time.deltaTime * speed < 1f)
 			{
 				float t = smoother.SmoothFloatSecondHalf(elapsed);
-				PieceGameObject.transform.SetPositionAndRotation(
-					Vector3.Slerp(startPosition - rotationCenter, targetPositionLocal, t) + rotationCenter,
-					Quaternion.Lerp(startRotation, targetRotation, t));
+				PieceGameObject.transform.localPosition = Vector3.Slerp(startPosition - rotationCenter, targetPositionLocal, t) + rotationCenter;
+				PieceGameObject.transform.localRotation = Quaternion.Lerp(startRotation, targetRotation, t);
 				elapsed += Time.deltaTime * speed;
 				yield return null;
 			}

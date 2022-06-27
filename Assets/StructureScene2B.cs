@@ -10,15 +10,23 @@ public class StructureScene2B : CubeScene3x3
 
 		cube.MoveSpeed = 1f;
 
-		yield return Execute("X2");
+		yield return StartCoroutine(cube.ExplodeCube<Piece3x3.TurnSmoothers.SmoothStep>());
 
-		cube.MoveSpeed = 3f;
+		yield return Execute("X2 Y' Z");
+
+		yield return StartCoroutine(cube.UnexplodeCube<Piece3x3.TurnSmoothers.SmoothStep>());
+
+		cube.MoveSpeed = 7f;
 
 		//yield return StartCoroutine(cube.ExplodeCube<Piece3x3.TurnSmoothers.SmoothStep>());
 
-		yield return Execute("R R2 R2' R'");
+		yield return Execute("R U R' U' R' F R2 U' R' U' R U R' F'");
 
-		yield return new WaitForSeconds(2f);
+		yield return new WaitForSeconds(1f);
+
+		yield return Execute("Z Y");
+
+		cube.MoveSpeed = 7f;
 
 		yield return Highlight(F, HighlightColors.Green);
 		yield return new WaitForSeconds(0.5f);
@@ -77,5 +85,7 @@ public class StructureScene2B : CubeScene3x3
 
 		yield return Execute("Z2");
 		yield return Execute("X'");
+
+		yield return Execute("R U R' U' R' F R2 U' R' U' R U R' F'");
 	}
 }
