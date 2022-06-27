@@ -162,12 +162,13 @@ public class Piece3x3
 	public Transform Root { get; set; }
 	public GameObject PieceGameObject { get; set; }
 	public PieceTypes PieceType { get; set; }
+	public static float DoubleTurnSwing { get => doubleTurnSwing; set => doubleTurnSwing = value; }
 
 	private readonly Material stickerBaseMaterial;
 	private readonly Renderer pieceRenderer;
 
 	private (Vector3 targetPosition, Quaternion targetRotation)? currentRotationTarget;
-	private float doubleTurnSwing = 0.75f;
+	private static float doubleTurnSwing = 0.75f;
 
 	public Piece3x3(GameObject pieceGameObject, Transform root, Color[] stickerColors, Material stickerMaterial)
 	{
@@ -247,7 +248,7 @@ public class Piece3x3
 		if (isDoubleTurn)
 		{
 			angle /= 2f;
-			speed = originalSpeed * (1f / smoother.MidPoint) * doubleTurnSwing;
+			speed = originalSpeed * (1f / smoother.MidPoint) * DoubleTurnSwing;
 		}
 
 		Quaternion targetRotationLocal = Quaternion.AngleAxis(angle, axis);
@@ -296,7 +297,7 @@ public class Piece3x3
 			targetRotation = targetRotationLocal * PieceGameObject.transform.rotation;
 
 			elapsed = 0f;
-			speed = originalSpeed * (1f / (1f - smoother.MidPoint)) * doubleTurnSwing;
+			speed = originalSpeed * (1f / (1f - smoother.MidPoint)) * DoubleTurnSwing;
 			while (elapsed + Time.deltaTime * speed < 1f)
 			{
 				float t = smoother.SmoothFloatSecondHalf(elapsed);

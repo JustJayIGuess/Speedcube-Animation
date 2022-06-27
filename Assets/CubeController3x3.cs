@@ -155,7 +155,6 @@ public class CubeController3x3 : MonoBehaviour
     private Piece3x3[][] cube = new Piece3x3[3][];
 
 	private List<(Coroutine, Piece3x3)> pieceTurnCoroutines = new List<(Coroutine, Piece3x3)>();
-	private Coroutine cameraRotationCoroutine;
 
 	public float MoveSpeed { get; set; } = 2f;
 	public float AlgorithmInterMoveDelay { get; set; } = 0.0f;
@@ -397,7 +396,7 @@ public class CubeController3x3 : MonoBehaviour
 		}
 		else
 		{
-			cubeCamera.transform.RotateAround(transform.position, MotionGroupToAxis[move.motionGroup], -turnAngle);
+			transform.RotateAround(transform.position, MotionGroupToAxis[move.motionGroup], turnAngle);
 		}
 	}
 
@@ -446,17 +445,7 @@ public class CubeController3x3 : MonoBehaviour
 
 	public void ExecuteMoveSmoothAsync<Smoother>(Move move, float speed = 2f, float postDelay = 0.1f, Action callback = null) where Smoother : Piece3x3.TurnSmoother, new()
 	{
-		foreach ((Coroutine, Piece3x3) pieceCoroutine in pieceTurnCoroutines)
-		{
-			StopCoroutine(pieceCoroutine.Item1);
-			pieceCoroutine.Item2.CompleteTurnsInstantly();
-		}
-		pieceTurnCoroutines.Clear();
-
-		int[][] selectedPieces = LayerToCubeIndex[move.motionGroup];
-		Piece3x3[][] faceTemp = new Piece3x3[][] { new Piece3x3[1], new Piece3x3[4], new Piece3x3[4] };
-
-        int turnIndexOffset;
+		int turnIndexOffset;
 		float turnAngle;
 		switch (move.turn)
 		{
@@ -486,32 +475,49 @@ public class CubeController3x3 : MonoBehaviour
 				break;
 		}
 
-		for (int i = 0; i < selectedPieces.Length; i++)
-        {
-            for (int j = 0; j < selectedPieces[i].Length; j++)
-            {
-				Piece3x3 currentPiece = cube[i][selectedPieces[i][j]];
+		if (move.moveType == Move.MoveType.LayerRotation)
+		{
+			foreach ((Coroutine, Piece3x3) pieceCoroutine in pieceTurnCoroutines)
+			{
+				StopCoroutine(pieceCoroutine.Item1);
+				pieceCoroutine.Item2.CompleteTurnsInstantly();
+			}
+			pieceTurnCoroutines.Clear();
+
+			int[][] selectedPieces = LayerToCubeIndex[move.motionGroup];
+			Piece3x3[][] faceTemp = new Piece3x3[][] { new Piece3x3[1], new Piece3x3[4], new Piece3x3[4] };
+
+			for (int i = 0; i < selectedPieces.Length; i++)
+			{
+				for (int j = 0; j < selectedPieces[i].Length; j++)
+				{
+					Piece3x3 currentPiece = cube[i][selectedPieces[i][j]];
 
 
-				pieceTurnCoroutines.Add((StartCoroutine(currentPiece.RotateToSmooth<Smoother>(
-					turnAngle,
-					MotionGroupToAxis[move.motionGroup],
-					speed,
-					postDelay,
-					callback)),
-					currentPiece));
-				faceTemp[i][(j + turnIndexOffset) % selectedPieces[i].Length] = currentPiece;
-            }
-        }
+					pieceTurnCoroutines.Add((StartCoroutine(currentPiece.RotateToSmooth<Smoother>(
+						turnAngle,
+						MotionGroupToAxis[move.motionGroup],
+						speed,
+						postDelay,
+						callback)),
+						currentPiece));
+					faceTemp[i][(j + turnIndexOffset) % selectedPieces[i].Length] = currentPiece;
+				}
+			}
 
-        for (int i = 0; i < selectedPieces.Length; i++)
-        {
-            for (int j = 0; j < selectedPieces[i].Length; j++)
-            {
-                cube[i][selectedPieces[i][j]] = faceTemp[i][j];
+			for (int i = 0; i < selectedPieces.Length; i++)
+			{
+				for (int j = 0; j < selectedPieces[i].Length; j++)
+				{
+					cube[i][selectedPieces[i][j]] = faceTemp[i][j];
+				}
 			}
 		}
-    }
+		else
+		{
+			transform.RotateAround(transform.position, MotionGroupToAxis[move.motionGroup], turnAngle);
+		}
+	}
 
 	public IEnumerator ExecuteMoveSmoothCoroutine<Smoother>(Move move, float speed = 2f, Action callback = null) where Smoother : Piece3x3.TurnSmoother, new()
 	{
@@ -587,43 +593,79 @@ public class CubeController3x3 : MonoBehaviour
 		}
 		else
 		{
-			if (cameraRotationCoroutine != null)
+			// It works, so I'm never going to touch this mess of code ever again
+
+			Smoother smoother = new Smoother();
+			float originalSpeed = speed;
+			bool isDoubleTurn = turnAngle == 180f || turnAngle == -180f;
+
+			if (isDoubleTurn)
 			{
-				StopCoroutine(cameraRotationCoroutine);
+				turnAngle /= 2f;
+				speed = originalSpeed * (1f / smoother.MidPoint) * Piece3x3.DoubleTurnSwing;
 			}
 
-			Quaternion startRotation = cubeCamera.transform.rotation;
-			Quaternion targetRotation = Quaternion.AngleAxis(-turnAngle, MotionGroupToAxis[move.motionGroup]);
+			Quaternion targetRotationLocal = Quaternion.AngleAxis(turnAngle, MotionGroupToAxis[move.motionGroup]);
 
-			//Vector3 startPositionLocal = cubeCamera.transform.position - transform.position;
-			//Vector3 targetPositionLocal = ;
+			Vector3 targetPositionLocal = targetRotationLocal * transform.position;
+			Quaternion targetRotation = targetRotationLocal * transform.rotation;
+
+			Quaternion startRotation = transform.rotation;
+			Vector3 startPosition = transform.position;
 
 			float elapsed = 0f;
-
-			while (elapsed + speed * Time.deltaTime < 1f)
+			while (elapsed + Time.deltaTime * speed < 1f)
 			{
-				float t = 1f - Mathf.Cos(Mathf.PI * elapsed);
-
-				cubeCamera.transform.rotation = Quaternion.Slerp(startRotation, targetRotation, t);
+				float t = isDoubleTurn ? smoother.SmoothFloatFirstHalf(elapsed) : smoother.SmoothFloat(elapsed);
+				transform.SetPositionAndRotation(
+					Vector3.Slerp(startPosition, targetPositionLocal, t),
+					Quaternion.Lerp(startRotation, targetRotation, t));
+				elapsed += Time.deltaTime * speed;
+				yield return null;
 			}
 
-			cubeCamera.transform.rotation = targetRotation;
+			if (isDoubleTurn)
+			{
+				transform.SetPositionAndRotation(targetPositionLocal, targetRotation);
+
+				startPosition = transform.position;
+				startRotation = transform.rotation;
+
+				targetRotationLocal = Quaternion.AngleAxis(turnAngle, MotionGroupToAxis[move.motionGroup]);
+
+				targetPositionLocal = targetRotationLocal * transform.position;
+				targetRotation = targetRotationLocal * transform.rotation;
+
+				elapsed = 0f;
+				speed = originalSpeed * (1f / (1f - smoother.MidPoint)) * Piece3x3.DoubleTurnSwing;
+				while (elapsed + Time.deltaTime * speed < 1f)
+				{
+					float t = smoother.SmoothFloatSecondHalf(elapsed);
+					transform.SetPositionAndRotation(
+						Vector3.Slerp(startPosition, targetPositionLocal, t),
+						Quaternion.Lerp(startRotation, targetRotation, t));
+					elapsed += Time.deltaTime * speed;
+					yield return null;
+				}
+			}
+
+			transform.SetPositionAndRotation(targetPositionLocal, targetRotation);
 		}
 		callback?.Invoke();
 	}
 
 	public void HighlightFaceAsync(CubeFaces face)
 	{
-
+		throw new NotImplementedException();
 	}
 
-	public void HighlightLayerAsync(CubeMotionGroups layer, Color highlightColor, float highlightIntensity)
+	public void HighlightLayerAsync(CubeMotionGroups layer, Color highlightColor, float highlightIntensity = 1f)
 	{
 		int[][] selectedPieces = LayerToCubeIndex[layer];
 		HighlightPiecesAsync(selectedPieces, highlightColor, highlightIntensity);
 	}
 
-	public void HighlightPiecesAsync(int[][] selectedPieces, Color highlightColor, float highlightIntensity)
+	public void HighlightPiecesAsync(int[][] selectedPieces, Color highlightColor, float highlightIntensity = 1f)
 	{
 		for (int pieceType = 0; pieceType < selectedPieces.Length; pieceType++)
 		{
@@ -642,7 +684,7 @@ public class CubeController3x3 : MonoBehaviour
 		}
 	}
 
-	public void HighlightPieceAsync(CubeFaces intersection, Color highlightColor, float highlightIntensity = 1f, float speed = 1f)
+	public void HighlightPieceAsync(CubeFaces intersection, Color highlightColor, float highlightIntensity = 1f, float speed = 2f)
 	{
 		(int pieceType, int index) = GetCubeReferenceFromFaceIntersection(intersection);
 		Piece3x3 currentPiece = cube[pieceType][index];
