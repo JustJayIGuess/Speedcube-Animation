@@ -6,6 +6,8 @@ public class StructureScene2B : CubeScene3x3
 {
 	protected override IEnumerator Scene()
 	{
+		Execute("R R2 R2' R'");
+
 		cube.MoveSpeed = 3f;
 
 		yield return Highlight(F, HighlightColors.Green);
