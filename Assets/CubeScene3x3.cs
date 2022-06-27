@@ -17,6 +17,13 @@ public class CubeScene3x3 : MonoBehaviour
     protected CubeController3x3 cube;
     public CubeScene3x3 nextScene = null;
 
+	protected const CubeController3x3.CubeFaces U = CubeController3x3.CubeFaces.U;
+	protected const CubeController3x3.CubeFaces D = CubeController3x3.CubeFaces.D;
+	protected const CubeController3x3.CubeFaces L = CubeController3x3.CubeFaces.L;
+	protected const CubeController3x3.CubeFaces R = CubeController3x3.CubeFaces.R;
+	protected const CubeController3x3.CubeFaces F = CubeController3x3.CubeFaces.F;
+	protected const CubeController3x3.CubeFaces B = CubeController3x3.CubeFaces.B;
+
     void Start()
     {
         cube = FindObjectOfType<CubeController3x3>();
@@ -28,7 +35,27 @@ public class CubeScene3x3 : MonoBehaviour
         yield return null;
 	}
 
-    public void BeginSequence()
+	protected Coroutine Execute(string move)
+	{
+		return StartCoroutine(cube.ExecuteAlgorithmSmoothCoroutine<Piece3x3.TurnSmoothers.SmoothStep>(move));
+	}
+
+	protected Coroutine Highlight(CubeController3x3.CubeFaces faceMask, Color color, float speed = 5f)
+	{
+		return StartCoroutine(cube.HighlightPieceCoroutine(faceMask, color, 1f, speed));
+	}
+
+	protected Coroutine Focus(CubeController3x3.CubeFaces faceMask, float speed = 5f)
+	{
+		return StartCoroutine(cube.HighlightPieceCoroutine(faceMask, HighlightColors.White, 0.5f, speed));
+	}
+
+	protected Coroutine Unhighlight(CubeController3x3.CubeFaces faceMask, float speed = 5f)
+	{
+		return StartCoroutine(cube.HighlightPieceCoroutine(faceMask, HighlightColors.White, 0f, speed));
+	}
+
+	public void BeginSequence()
 	{
         StartCoroutine(Scene());
 	}

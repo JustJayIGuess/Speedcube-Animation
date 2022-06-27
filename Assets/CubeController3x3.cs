@@ -699,6 +699,26 @@ public class CubeController3x3 : MonoBehaviour
 		}
 	}
 
+	public IEnumerator HighlightPieceCoroutine(CubeFaces intersection, Color highlightColor, float highlightIntensity = 1f, float speed = 2f)
+	{
+		(int pieceType, int index) = GetCubeReferenceFromFaceIntersection(intersection);
+		Piece3x3 currentPiece = cube[pieceType][index];
+
+		for (int sticker = 0; sticker < (int)currentPiece.PieceType; sticker++)
+		{
+			if (stickerHighlightCoroutines[pieceType][index][sticker] != null)
+			{
+				StopCoroutine(stickerHighlightCoroutines[pieceType][index][sticker]);
+			}
+			stickerHighlightCoroutines[pieceType][index][sticker] = StartCoroutine(currentPiece.HighlightSticker(sticker, highlightColor, highlightIntensity, speed));
+		}
+
+		foreach (Coroutine stickerHighlightCoroutine in stickerHighlightCoroutines[pieceType][index])
+		{
+			yield return stickerHighlightCoroutine;
+		}
+	}
+
 	public void ExecuteAlgorithmInstant(string algorithm)
 	{
 		string[] moveStrings = algorithm.Split(new char[] { ' ', '.', ',', '/', '\t', '\n' }, StringSplitOptions.RemoveEmptyEntries);

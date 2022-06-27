@@ -6,41 +6,62 @@ public class StructureScene2B : CubeScene3x3
 {
 	protected override IEnumerator Scene()
 	{
-		//cube.ExecuteAlgorithmInstant("R U R' U' R' F R2 U' R' U' R U R' F' U2");
+		cube.MoveSpeed = 3f;
 
-		//yield return new WaitForSeconds(1f);
+		yield return Highlight(F, HighlightColors.Green);
+		yield return new WaitForSeconds(0.5f);
+		yield return Execute("Y");
+		yield return Highlight(B, HighlightColors.Blue);
+		yield return new WaitForSeconds(0.5f);
 
-		//yield return StartCoroutine(cube.ExecuteMoveSmoothCoroutine<Piece3x3.TurnSmoothers.CubicEaseOut>(new CubeController3x3.Move(CubeController3x3.CubeMotionGroups.U, CubeController3x3.CubeTurns.DoubleClockwise)));
+		yield return Unhighlight(F);
+		yield return Unhighlight(B);
 
-		cube.HighlightPieceAsync(CubeController3x3.CubeFaces.R, HighlightColors.Orange);
-		yield return new WaitForSeconds(1f);
 
-		yield return StartCoroutine(cube.ExecuteMoveSmoothCoroutine<Piece3x3.TurnSmoothers.SmoothStep>(new CubeController3x3.Move(CubeController3x3.CubeMotionGroups.U, CubeController3x3.CubeTurns.DoubleAntiClockwise)));
-		yield return StartCoroutine(cube.ExecuteMoveSmoothCoroutine<Piece3x3.TurnSmoothers.SmoothStep>(new CubeController3x3.Move(CubeController3x3.CubeMotionGroups.U, CubeController3x3.CubeTurns.DoubleClockwise)));
-		yield return StartCoroutine(cube.ExecuteMoveSmoothCoroutine<Piece3x3.TurnSmoothers.SmoothStep>(new CubeController3x3.Move(CubeController3x3.CubeMotionGroups.X, CubeController3x3.CubeTurns.DoubleAntiClockwise)));
-		yield return StartCoroutine(cube.ExecuteMoveSmoothCoroutine<Piece3x3.TurnSmoothers.SmoothStep>(new CubeController3x3.Move(CubeController3x3.CubeMotionGroups.X, CubeController3x3.CubeTurns.DoubleClockwise)));
-		yield return StartCoroutine(cube.ExecuteMoveSmoothCoroutine<Piece3x3.TurnSmoothers.SmoothStep>(new CubeController3x3.Move(CubeController3x3.CubeMotionGroups.Y, CubeController3x3.CubeTurns.DoubleAntiClockwise)));
-		yield return StartCoroutine(cube.ExecuteMoveSmoothCoroutine<Piece3x3.TurnSmoothers.SmoothStep>(new CubeController3x3.Move(CubeController3x3.CubeMotionGroups.Y, CubeController3x3.CubeTurns.DoubleClockwise)));
-		yield return StartCoroutine(cube.ExecuteMoveSmoothCoroutine<Piece3x3.TurnSmoothers.SmoothStep>(new CubeController3x3.Move(CubeController3x3.CubeMotionGroups.Z, CubeController3x3.CubeTurns.DoubleAntiClockwise)));
-		yield return StartCoroutine(cube.ExecuteMoveSmoothCoroutine<Piece3x3.TurnSmoothers.SmoothStep>(new CubeController3x3.Move(CubeController3x3.CubeMotionGroups.Z, CubeController3x3.CubeTurns.DoubleClockwise)));
-		//yield return StartCoroutine(cube.ExecuteMoveSmoothCoroutine<Piece3x3.TurnSmoothers.SmoothStep>(new CubeController3x3.Move(CubeController3x3.CubeMotionGroups.Z, CubeController3x3.CubeTurns.Clockwise)));
+		yield return Highlight(R, HighlightColors.Red);
+		yield return new WaitForSeconds(0.5f);
+		yield return Execute("Y");
+		yield return Highlight(L, HighlightColors.Orange);
+		yield return new WaitForSeconds(0.5f);
 
-		//cube.HighlightPieceAsync(CubeController3x3.CubeFaces.U | CubeController3x3.CubeFaces.R | CubeController3x3.CubeFaces.F, HighlightColors.Green);
-		//cube.HighlightPieceAsync(CubeController3x3.CubeFaces.U | CubeController3x3.CubeFaces.R | CubeController3x3.CubeFaces.B, HighlightColors.Red);
-		//yield return new WaitForSeconds(2f);
+		yield return Unhighlight(L);
+		yield return Unhighlight(R);
 
-		//cube.MoveSpeed = 5f;
-		//yield return StartCoroutine(cube.ExecuteAlgorithmSmoothCoroutine<Piece3x3.TurnSmoothers.CubicEaseOut>("R U R' U' R' F R2 U' R' U' R U R' F'"));
-		//yield return new WaitForSeconds(0.2f);
 
-		//for (int i = 0; i < 7; i++)
-		//{
-		//	cube.HighlightPieceAsync(CubeController3x3.CubeFaces.U | CubeController3x3.CubeFaces.R | CubeController3x3.CubeFaces.B, HighlightColors.Green, i % 2, 5f);
-		//	cube.HighlightPieceAsync(CubeController3x3.CubeFaces.U | CubeController3x3.CubeFaces.R | CubeController3x3.CubeFaces.F, HighlightColors.Red, i % 2, 5f);
-		//	cube.HighlightPieceAsync(CubeController3x3.CubeFaces.U | CubeController3x3.CubeFaces.R, HighlightColors.White, i % 2, 5f);
-		//	cube.HighlightPieceAsync(CubeController3x3.CubeFaces.U | CubeController3x3.CubeFaces.L, HighlightColors.Blue, i % 2, 5f);
-		//	yield return new WaitForSeconds(0.2f);
-		//}
+		yield return Highlight(U, HighlightColors.White);
+		yield return new WaitForSeconds(0.5f);
+		yield return Execute("X");
+		yield return Highlight(D, HighlightColors.Yellow);
+		yield return new WaitForSeconds(0.5f);
 
+		yield return Unhighlight(U);
+		yield return Unhighlight(D);
+
+		yield return new WaitForSeconds(0.5f);
+
+		// B O Y
+		yield return Execute("Y'");
+		// B Y R
+		yield return Focus(B | D | R);
+		yield return new WaitForSeconds(0.5f);
+		yield return Unhighlight(B | D | R);
+
+
+		yield return Focus(D | R);
+		yield return new WaitForSeconds(0.5f);
+		yield return Unhighlight(D | R);
+
+		yield return Execute("Y");
+		// B O Y
+		yield return Focus(B | D | L);
+		yield return new WaitForSeconds(0.5f);
+		yield return Unhighlight(B | D | L);
+
+		yield return Focus(B | L);
+		yield return new WaitForSeconds(1.5f);
+		_ = Unhighlight(B | L);
+
+		yield return Execute("Z2");
+		yield return Execute("X'");
 	}
 }
