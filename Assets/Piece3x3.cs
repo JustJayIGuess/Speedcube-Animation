@@ -232,9 +232,10 @@ public class Piece3x3
 		Vector3 rotationCenter = Root.position + 2f * axis;
 
 		Quaternion targetRotationLocal = Quaternion.AngleAxis(angle, axis);
-		Vector3 targetPositionLocal = targetRotationLocal * (PieceGameObject.transform.position - rotationCenter);
+		Vector3 targetPositionLocal = targetRotationLocal * (PieceGameObject.transform.localPosition - rotationCenter);
 
-		PieceGameObject.transform.SetPositionAndRotation(targetPositionLocal + rotationCenter, targetRotationLocal * PieceGameObject.transform.rotation);
+		PieceGameObject.transform.localPosition = targetPositionLocal + rotationCenter;
+		PieceGameObject.transform.localRotation = targetRotationLocal * PieceGameObject.transform.localRotation;
 	}
 
 	public IEnumerator RotateToSmooth<Smoother>(float angle, Vector3 axis, float speed = 1f, float postDelay = 0.1f, Action callback = null) where Smoother : TurnSmoother, new()
@@ -243,7 +244,7 @@ public class Piece3x3
 		float originalSpeed = speed;
 		bool isDoubleTurn = angle == 180f || angle == -180f;
 
-		Vector3 rotationCenter = Root.position + 2f * axis;
+		Vector3 rotationCenter = Root.localPosition + 2f * axis;
 
 		if (isDoubleTurn)
 		{
@@ -253,15 +254,15 @@ public class Piece3x3
 
 		Quaternion targetRotationLocal = Quaternion.AngleAxis(angle, axis);
 
-		Vector3 targetPositionLocal = targetRotationLocal * (PieceGameObject.transform.position - rotationCenter);
-		Quaternion targetRotation = targetRotationLocal * PieceGameObject.transform.rotation;
+		Vector3 targetPositionLocal = targetRotationLocal * (PieceGameObject.transform.localPosition - rotationCenter);
+		Quaternion targetRotation = targetRotationLocal * PieceGameObject.transform.localRotation;
 
 		if (isDoubleTurn)
 		{
 			Quaternion targetRotationLocalTemp = Quaternion.AngleAxis(180f, axis);
 
-			Vector3 targetPositionLocalTemp = targetRotationLocalTemp * (PieceGameObject.transform.position - rotationCenter);
-			Quaternion targetRotationTemp = targetRotationLocalTemp * PieceGameObject.transform.rotation;
+			Vector3 targetPositionLocalTemp = targetRotationLocalTemp * (PieceGameObject.transform.localPosition - rotationCenter);
+			Quaternion targetRotationTemp = targetRotationLocalTemp * PieceGameObject.transform.localRotation;
 
 			currentRotationTarget = (targetPositionLocalTemp + rotationCenter, targetRotationTemp);
 		}
@@ -270,46 +271,46 @@ public class Piece3x3
 			currentRotationTarget = (targetPositionLocal + rotationCenter, targetRotation);
 		}
 
-		Quaternion startRotation = PieceGameObject.transform.rotation;
-		Vector3 startPosition = PieceGameObject.transform.position;
+		Quaternion startRotation = PieceGameObject.transform.localRotation;
+		Vector3 startPosition = PieceGameObject.transform.localPosition;
 
 		float elapsed = 0f;
 		while (elapsed + Time.deltaTime * speed < 1f)
 		{
 			float t = isDoubleTurn ? smoother.SmoothFloatFirstHalf(elapsed) : smoother.SmoothFloat(elapsed);
-			PieceGameObject.transform.SetPositionAndRotation(
-				Vector3.Slerp(startPosition - rotationCenter, targetPositionLocal, t) + rotationCenter,
-				Quaternion.Lerp(startRotation, targetRotation, t));
+			PieceGameObject.transform.localPosition = Vector3.Slerp(startPosition - rotationCenter, targetPositionLocal, t) + rotationCenter;
+			PieceGameObject.transform.localRotation = Quaternion.Lerp(startRotation, targetRotation, t);
 			elapsed += Time.deltaTime * speed;
 			yield return null;
 		}
 
 		if (isDoubleTurn)
 		{
-			PieceGameObject.transform.SetPositionAndRotation(targetPositionLocal + rotationCenter, targetRotation);
+			PieceGameObject.transform.localPosition = targetPositionLocal + rotationCenter;
+			PieceGameObject.transform.localRotation = targetRotation;
 
-			startPosition = PieceGameObject.transform.position;
-			startRotation = PieceGameObject.transform.rotation;
+			startPosition = PieceGameObject.transform.localPosition;
+			startRotation = PieceGameObject.transform.localRotation;
 
 			targetRotationLocal = Quaternion.AngleAxis(angle, axis);
 
-			targetPositionLocal = targetRotationLocal * (PieceGameObject.transform.position - rotationCenter);
-			targetRotation = targetRotationLocal * PieceGameObject.transform.rotation;
+			targetPositionLocal = targetRotationLocal * (PieceGameObject.transform.localPosition - rotationCenter);
+			targetRotation = targetRotationLocal * PieceGameObject.transform.localRotation;
 
 			elapsed = 0f;
 			speed = originalSpeed * (1f / (1f - smoother.MidPoint)) * DoubleTurnSwing;
 			while (elapsed + Time.deltaTime * speed < 1f)
 			{
 				float t = smoother.SmoothFloatSecondHalf(elapsed);
-				PieceGameObject.transform.SetPositionAndRotation(
-					Vector3.Slerp(startPosition - rotationCenter, targetPositionLocal, t) + rotationCenter,
-					Quaternion.Lerp(startRotation, targetRotation, t));
+				PieceGameObject.transform.localPosition = Vector3.Slerp(startPosition - rotationCenter, targetPositionLocal, t) + rotationCenter;
+				PieceGameObject.transform.localRotation = Quaternion.Lerp(startRotation, targetRotation, t);
 				elapsed += Time.deltaTime * speed;
 				yield return null;
 			}
 		}
 
-		PieceGameObject.transform.SetPositionAndRotation(targetPositionLocal + rotationCenter, targetRotation);
+		PieceGameObject.transform.localPosition = targetPositionLocal + rotationCenter;
+		PieceGameObject.transform.localRotation = targetRotation;
 		currentRotationTarget = null;
 
 		yield return new WaitForSeconds(postDelay);
@@ -320,7 +321,8 @@ public class Piece3x3
 	public void CompleteTurnsInstantly()
 	{
 		if (currentRotationTarget != null) {
-			PieceGameObject.transform.SetPositionAndRotation((Vector3)currentRotationTarget?.targetPosition, (Quaternion)currentRotationTarget?.targetRotation);
+			PieceGameObject.transform.localPosition = (Vector3)currentRotationTarget?.targetPosition;
+			PieceGameObject.transform.localRotation = (Quaternion)currentRotationTarget?.targetRotation;
 
 			currentRotationTarget = null;
 		}

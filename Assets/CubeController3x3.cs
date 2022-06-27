@@ -135,9 +135,7 @@ public class CubeController3x3 : MonoBehaviour
 		{ 'Z', CubeMotionGroups.Z }
 	};
 
-	[Header("Camera")]
-	[SerializeField]
-	private Camera cubeCamera;
+	private GameObject defaultVirtualCamera;
 	
 	[Space(10f)]
 	[Header("Roots")]
@@ -159,11 +157,15 @@ public class CubeController3x3 : MonoBehaviour
 	public float MoveSpeed { get; set; } = 2f;
 	public float AlgorithmInterMoveDelay { get; set; } = 0.0f;
 
+	public bool IsExploded { get; private set; } = false;
+
 	private Queue<Move> moveQueue = new Queue<Move>();
 	private Coroutine[][][] stickerHighlightCoroutines = new Coroutine[3][][];
 
 	void Awake()
 	{
+		defaultVirtualCamera = GameObject.FindGameObjectWithTag("DefaultCam");
+
 		cube[0] = new Piece3x3[6];
 		cube[1] = new Piece3x3[12];
 		cube[2] = new Piece3x3[8];
@@ -329,6 +331,101 @@ public class CubeController3x3 : MonoBehaviour
 			yield return StartCoroutine(ExecuteMoveSmoothCoroutine<Smoother>(moveQueue.Dequeue(), MoveSpeed));
 		}
 		callback?.Invoke();
+	}
+
+	public IEnumerator ExplodeCube<Smoother>(float speed = 2f) where Smoother : Piece3x3.TurnSmoother, new()
+	{
+		if (!IsExploded)
+		{
+			defaultVirtualCamera.SetActive(false);
+
+			yield return new WaitForSeconds(1f);
+
+			IsExploded = true;
+			Smoother smoother = new Smoother();
+
+			Vector3[][] originalPositions = new Vector3[3][];
+			for (int pieceType = 0; pieceType < cube.Length; pieceType++)
+			{
+				originalPositions[pieceType] = new Vector3[cube[pieceType].Length];
+				for (int pieceIndex = 0; pieceIndex < cube[pieceType].Length; pieceIndex++)
+				{
+					originalPositions[pieceType][pieceIndex] = cube[pieceType][pieceIndex].PieceGameObject.transform.position;
+				}
+			}
+
+			float elapsed = 0f;
+
+			while (elapsed + Time.deltaTime * speed < 1f)
+			{
+				for (int pieceType = 0; pieceType < cube.Length; pieceType++)
+				{
+					for (int pieceIndex = 0; pieceIndex < cube[pieceType].Length; pieceIndex++)
+					{
+						cube[pieceType][pieceIndex].PieceGameObject.transform.position = originalPositions[pieceType][pieceIndex] * (1f + smoother.SmoothFloat(elapsed));
+					}
+				}
+				elapsed += Time.deltaTime * speed;
+				yield return null;
+			}
+
+
+			for (int pieceType = 0; pieceType < cube.Length; pieceType++)
+			{
+				for (int pieceIndex = 0; pieceIndex < cube[pieceType].Length; pieceIndex++)
+				{
+					cube[pieceType][pieceIndex].PieceGameObject.transform.position = originalPositions[pieceType][pieceIndex] * 2f;
+				}
+			}
+
+			yield return null;
+		}
+	}
+
+	public IEnumerator UnexplodeCube<Smoother>(float speed = 2f) where Smoother : Piece3x3.TurnSmoother, new()
+	{
+		if (IsExploded)
+		{
+			IsExploded = false;
+			Smoother smoother = new Smoother();
+
+			Vector3[][] originalPositions = new Vector3[3][];
+			for (int pieceType = 0; pieceType < cube.Length; pieceType++)
+			{
+				originalPositions[pieceType] = new Vector3[cube[pieceType].Length];
+				for (int pieceIndex = 0; pieceIndex < cube[pieceType].Length; pieceIndex++)
+				{
+					originalPositions[pieceType][pieceIndex] = cube[pieceType][pieceIndex].PieceGameObject.transform.position;
+				}
+			}
+
+			float elapsed = 0f;
+
+			while (elapsed + Time.deltaTime * speed < 1f)
+			{
+				for (int pieceType = 0; pieceType < cube.Length; pieceType++)
+				{
+					for (int pieceIndex = 0; pieceIndex < cube[pieceType].Length; pieceIndex++)
+					{
+						cube[pieceType][pieceIndex].PieceGameObject.transform.position = originalPositions[pieceType][pieceIndex] / (1f + smoother.SmoothFloat(elapsed));
+					}
+				}
+				elapsed += Time.deltaTime * speed;
+				yield return null;
+			}
+
+			for (int pieceType = 0; pieceType < cube.Length; pieceType++)
+			{
+				for (int pieceIndex = 0; pieceIndex < cube[pieceType].Length; pieceIndex++)
+				{
+					cube[pieceType][pieceIndex].PieceGameObject.transform.position = originalPositions[pieceType][pieceIndex] / 2f;
+				}
+			}
+			defaultVirtualCamera.SetActive(true);
+
+			yield return null;
+
+		}
 	}
 
 	public void ExecuteMoveInstant(Move move)
@@ -606,50 +703,37 @@ public class CubeController3x3 : MonoBehaviour
 			}
 
 			Quaternion targetRotationLocal = Quaternion.AngleAxis(turnAngle, MotionGroupToAxis[move.motionGroup]);
-
-			Vector3 targetPositionLocal = targetRotationLocal * transform.position;
-			Quaternion targetRotation = targetRotationLocal * transform.rotation;
-
-			Quaternion startRotation = transform.rotation;
-			Vector3 startPosition = transform.position;
+			Quaternion targetRotation = targetRotationLocal * transform.parent.localRotation;
+			Quaternion startRotation = transform.parent.localRotation;
 
 			float elapsed = 0f;
 			while (elapsed + Time.deltaTime * speed < 1f)
 			{
 				float t = isDoubleTurn ? smoother.SmoothFloatFirstHalf(elapsed) : smoother.SmoothFloat(elapsed);
-				transform.SetPositionAndRotation(
-					Vector3.Slerp(startPosition, targetPositionLocal, t),
-					Quaternion.Lerp(startRotation, targetRotation, t));
+				transform.parent.localRotation = Quaternion.Lerp(startRotation, targetRotation, t);
 				elapsed += Time.deltaTime * speed;
 				yield return null;
 			}
 
 			if (isDoubleTurn)
 			{
-				transform.SetPositionAndRotation(targetPositionLocal, targetRotation);
-
-				startPosition = transform.position;
-				startRotation = transform.rotation;
-
+				transform.parent.localRotation = targetRotation;
+				startRotation = transform.parent.localRotation;
 				targetRotationLocal = Quaternion.AngleAxis(turnAngle, MotionGroupToAxis[move.motionGroup]);
-
-				targetPositionLocal = targetRotationLocal * transform.position;
-				targetRotation = targetRotationLocal * transform.rotation;
+				targetRotation = targetRotationLocal * transform.parent.localRotation;
 
 				elapsed = 0f;
 				speed = originalSpeed * (1f / (1f - smoother.MidPoint)) * Piece3x3.DoubleTurnSwing;
 				while (elapsed + Time.deltaTime * speed < 1f)
 				{
 					float t = smoother.SmoothFloatSecondHalf(elapsed);
-					transform.SetPositionAndRotation(
-						Vector3.Slerp(startPosition, targetPositionLocal, t),
-						Quaternion.Lerp(startRotation, targetRotation, t));
+					transform.parent.localRotation = Quaternion.Lerp(startRotation, targetRotation, t);
 					elapsed += Time.deltaTime * speed;
 					yield return null;
 				}
 			}
 
-			transform.SetPositionAndRotation(targetPositionLocal, targetRotation);
+			transform.parent.localRotation = targetRotation;
 		}
 		callback?.Invoke();
 	}
