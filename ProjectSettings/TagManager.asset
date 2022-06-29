@@ -6,6 +6,9 @@ TagManager:
   tags:
   - ExplodedCam
   - DefaultCam
+  - SlowTurnSound
+  - MediumTurnSound
+  - FastTurnSound
   layers:
   - Default
   - TransparentFX
